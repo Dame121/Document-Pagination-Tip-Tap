@@ -2,6 +2,7 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import React from "react";
+import MenuBar from "./menu-bar";
 
 
 export default function RichTextEditor() {
@@ -16,5 +17,8 @@ export default function RichTextEditor() {
     },  
   })
 
-  return <EditorContent editor={editor} />
+  return <div>
+  <MenuBar editor={editor} />
+  <EditorContent editor={editor} />
+  </div>
 }
