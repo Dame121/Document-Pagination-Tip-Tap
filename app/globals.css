@@ -153,3 +153,19 @@
 .ProseMirror li p {
   margin: 0;
 }
+
+/* Print styles for US Letter */
+@media print {
+  @page {
+    size: letter;
+    margin: 1in;
+  }
+  
+  body {
+    background: white !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}
