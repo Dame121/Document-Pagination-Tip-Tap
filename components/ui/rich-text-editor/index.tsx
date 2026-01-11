@@ -4,6 +4,9 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
+import Underline from "@tiptap/extension-underline";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
 import MenuBar from "./menu-bar";
 
 export default function RichTextEditor() {
@@ -25,9 +28,14 @@ export default function RichTextEditor() {
         types: ["heading", "paragraph"],
         defaultAlignment: "left",
       }),
-      Highlight,
+      Highlight.configure({
+        multicolor: true,
+      }),
+      Underline,
+      Subscript,
+      Superscript,
     ],
-    content: "<p>Hello World!</p>",
+    content: "<p></p>",
     immediatelyRender: false,
     editorProps: {
       attributes: {
