@@ -22,6 +22,8 @@ import {
   Subscript as SubscriptIcon,
   Superscript as SuperscriptIcon,
   ChevronDown,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 
 interface MenuBarProps {
@@ -168,6 +170,26 @@ export default function MenuBar({ editor }: MenuBarProps) {
 
   return (
     <div className="border rounded-lg p-2 mb-2 bg-white shadow-sm flex flex-wrap gap-1 sticky top-4 z-50 no-print max-w-[8.5in] mx-auto">
+      {/* Undo/Redo buttons */}
+      <button
+        onClick={() => editor.chain().focus().undo().run()}
+        disabled={!editor.can().undo()}
+        className="p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Undo"
+      >
+        <Undo2 className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => editor.chain().focus().redo().run()}
+        disabled={!editor.can().redo()}
+        className="p-2 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Redo"
+      >
+        <Redo2 className="w-4 h-4" />
+      </button>
+
+      <div className="w-px bg-gray-300 mx-1" /> {/* Divider */}
+
       {options.map((option, index) => (
         <Toggle
           key={index}
@@ -228,4 +250,5 @@ export default function MenuBar({ editor }: MenuBarProps) {
       </div>
     </div>
   );
+  
 }

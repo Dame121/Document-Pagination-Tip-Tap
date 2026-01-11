@@ -1,6 +1,6 @@
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, EditorContext } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
@@ -45,18 +45,20 @@ export default function RichTextEditor() {
   });
 
   return (
-    <div className="max-w-[8.5in] mx-auto">
-      <MenuBar editor={editor} />
-      <div 
-        className="bg-white shadow-lg mx-auto"
-        style={{
-          width: '8.5in',
-          minHeight: '11in',
-          padding: '1in',
-        }}
-      >
-        <EditorContent editor={editor} />
+    <EditorContext.Provider value={{ editor }}>
+      <div className="max-w-[8.5in] mx-auto">
+        <MenuBar editor={editor} />
+        <div 
+          className="bg-white shadow-lg mx-auto"
+          style={{
+            width: '8.5in',
+            minHeight: '11in',
+            padding: '1in',
+          }}
+        >
+          <EditorContent editor={editor} role="presentation" />
+        </div>
       </div>
-    </div>
+    </EditorContext.Provider>
   );
 }
