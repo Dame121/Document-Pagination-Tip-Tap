@@ -9,6 +9,11 @@ interface PageFormatSelectorProps {
   onFormatChange: (format: PageFormatId) => void;
 }
 
+// Convert pixels to inches for display (at 96 DPI)
+function pxToInches(px: number): string {
+  return (px / 96).toFixed(1);
+}
+
 export function PageFormatSelector({ currentFormat, onFormatChange }: PageFormatSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -41,7 +46,7 @@ export function PageFormatSelector({ currentFormat, onFormatChange }: PageFormat
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[180px]">
+        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 min-w-[200px]">
           <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
             Page Format
           </div>
@@ -58,7 +63,7 @@ export function PageFormatSelector({ currentFormat, onFormatChange }: PageFormat
             >
               <span className="font-medium">{format.name}</span>
               <span className="text-xs text-gray-400">
-                {format.width}" × {format.height}"
+                {pxToInches(format.width)}" × {pxToInches(format.height)}"
               </span>
             </button>
           ))}

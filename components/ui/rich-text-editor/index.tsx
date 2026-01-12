@@ -8,10 +8,9 @@ import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
+import { PaginationPlus } from "tiptap-pagination-plus";
 import MenuBar from "./menu-bar";
-import { usePageBreaks } from "@/hooks/use-page-breaks";
-import { PagesContainer } from "./page-break";
-import { PageFormatId, DEFAULT_PAGE_FORMAT, getPageFormat, getPageDimensionsInPixels } from "@/lib/page-formats";
+import { PageFormatId, DEFAULT_PAGE_FORMAT, getPageFormat } from "@/lib/page-formats";
 
 interface RichTextEditorProps {
   defaultPageFormat?: PageFormatId;
@@ -19,6 +18,7 @@ interface RichTextEditorProps {
 
 export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT }: RichTextEditorProps) {
   const [pageFormat, setPageFormat] = useState<PageFormatId>(defaultPageFormat);
+  const currentFormat = getPageFormat(pageFormat);
   
   const editor = useEditor({
     extensions: [
@@ -44,6 +44,24 @@ export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT
       Underline,
       Subscript,
       Superscript,
+      PaginationPlus.configure({
+        pageHeight: currentFormat.height,
+        pageWidth: currentFormat.width,
+        pageGap: 20,
+        pageBreakBackground: "#e5e7eb",
+        pageGapBorderSize: 1,
+        pageGapBorderColor: "#d1d5db",
+        marginTop: currentFormat.marginTop,
+        marginBottom: currentFormat.marginBottom,
+        marginLeft: currentFormat.marginLeft,
+        marginRight: currentFormat.marginRight,
+        contentMarginTop: 20,
+        contentMarginBottom: 20,
+        headerLeft: "",
+        headerRight: "",
+        footerLeft: "",
+        footerRight: "Page {page}",
+      }),
     ],
     content: "<p></p>",
     immediatelyRender: false,
@@ -54,38 +72,41 @@ export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT
     },
   });
 
-  const { pageBreaks, totalPages, contentHeight, marginSize, pageWidth } = usePageBreaks(editor, pageFormat);
-  
-  // Get current page format dimensions
-  const currentFormat = getPageFormat(pageFormat);
-  const dimensions = getPageDimensionsInPixels(currentFormat);
+  // Handle page format change
+  const handlePageFormatChange = (newFormat: PageFormatId) => {
+    setPageFormat(newFormat);
+    const format = getPageFormat(newFormat);
+    
+    if (editor) {
+      // Use the updatePageSize command from tiptap-pagination-plus
+      editor.chain()
+        .focus()
+        .updatePageSize({
+          pageWidth: format.width,
+          pageHeight: format.height,
+          marginTop: format.marginTop,
+          marginBottom: format.marginBottom,
+          marginLeft: format.marginLeft,
+          marginRight: format.marginRight,
+        })
+        .run();
+    }
+  };
 
   return (
     <EditorContext.Provider value={{ editor }}>
-      <div className="editor-document-wrapper" style={{ maxWidth: `${dimensions.width}px` }}>
+      <div className="editor-document-wrapper">
         <MenuBar 
           editor={editor} 
           pageFormat={pageFormat}
-          onPageFormatChange={setPageFormat}
+          onPageFormatChange={handlePageFormatChange}
         />
         <div className="editor-pages-scroll-container">
-          <div 
-            className="editor-page"
-            style={{ width: `${dimensions.width}px` }}
-          >
-            <PagesContainer 
-              totalPages={totalPages} 
-              pageBreaks={pageBreaks}
-              contentHeight={contentHeight}
-              marginSize={marginSize}
-            >
-              <EditorContent editor={editor} role="presentation" />
-            </PagesContainer>
-          </div>
-        </div>
-        {/* Page counter footer */}
-        <div className="editor-page-counter">
-          {currentFormat.name} · {totalPages} {totalPages === 1 ? 'page' : 'pages'}
+          <EditorContent 
+            editor={editor} 
+            role="presentation"
+            className="editor-content-area"
+          />
         </div>
       </div>
     </EditorContext.Provider>
