@@ -25,12 +25,16 @@ import {
   Undo2,
   Redo2,
 } from "lucide-react";
+import { PageFormatSelector } from "./page-format-selector";
+import { PageFormatId } from "@/lib/page-formats";
 
 interface MenuBarProps {
   editor: Editor | null;
+  pageFormat?: PageFormatId;
+  onPageFormatChange?: (format: PageFormatId) => void;
 }
 
-export default function MenuBar({ editor }: MenuBarProps) {
+export default function MenuBar({ editor, pageFormat, onPageFormatChange }: MenuBarProps) {
   const [, setForceUpdate] = useState(0);
   const [showHighlightColors, setShowHighlightColors] = useState(false);
 
@@ -169,7 +173,18 @@ export default function MenuBar({ editor }: MenuBarProps) {
   ];
 
   return (
-    <div className="border rounded-lg p-2 mb-2 bg-white shadow-sm flex flex-wrap gap-1 sticky top-4 z-50 no-print max-w-[8.5in] mx-auto">
+    <div className="border rounded-lg p-2 mb-2 bg-white shadow-sm flex flex-wrap items-center gap-1 sticky top-4 z-50 no-print">
+      {/* Page Format Selector */}
+      {pageFormat && onPageFormatChange && (
+        <>
+          <PageFormatSelector 
+            currentFormat={pageFormat} 
+            onFormatChange={onPageFormatChange} 
+          />
+          <div className="w-px h-6 bg-gray-300 mx-1" /> {/* Divider */}
+        </>
+      )}
+
       {/* Undo/Redo buttons */}
       <button
         onClick={() => editor.chain().focus().undo().run()}
@@ -188,7 +203,7 @@ export default function MenuBar({ editor }: MenuBarProps) {
         <Redo2 className="w-4 h-4" />
       </button>
 
-      <div className="w-px bg-gray-300 mx-1" /> {/* Divider */}
+      <div className="w-px h-6 bg-gray-300 mx-1" /> {/* Divider */}
 
       {options.map((option, index) => (
         <Toggle
