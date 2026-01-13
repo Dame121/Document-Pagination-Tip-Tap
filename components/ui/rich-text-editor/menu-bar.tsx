@@ -31,6 +31,7 @@ import {
   FileDown,
   FileText,
   PanelTop,
+  Printer,
 } from "lucide-react";
 import { PageFormatSelector } from "./page-format-selector";
 import { PageFormatId } from "@/lib/page-formats";
@@ -229,6 +230,175 @@ export default function MenuBar({
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handlePrint = () => {
+    if (!editor) return;
+    setShowExportMenu(false);
+    
+    // Create a hidden iframe for printing
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    
+    if (!iframe.contentDocument) return;
+    
+    // Get the editor content
+    const editorContent = editor.getHTML();
+    
+    // Create the print HTML with styling
+    const printHTML = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Print Document</title>
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              line-height: 1.6;
+              color: #000;
+              background: white;
+            }
+            
+            @page {
+              size: letter;
+              margin: 0.75in;
+            }
+            
+            @media print {
+              body {
+                margin: 0;
+                padding: 0;
+              }
+            }
+            
+            .print-content {
+              padding: 1in;
+            }
+            
+            h1 {
+              font-size: 28px;
+              font-weight: bold;
+              margin: 20px 0 10px 0;
+              page-break-after: avoid;
+            }
+            
+            h2 {
+              font-size: 22px;
+              font-weight: bold;
+              margin: 16px 0 8px 0;
+              page-break-after: avoid;
+            }
+            
+            h3 {
+              font-size: 16px;
+              font-weight: bold;
+              margin: 12px 0 6px 0;
+              page-break-after: avoid;
+            }
+            
+            p {
+              margin: 8px 0;
+              text-align: justify;
+            }
+            
+            ul, ol {
+              margin: 8px 0 8px 20px;
+              page-break-inside: avoid;
+            }
+            
+            li {
+              margin: 4px 0;
+            }
+            
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 12px 0;
+              page-break-inside: avoid;
+            }
+            
+            th, td {
+              border: 1px solid #ddd;
+              padding: 8px;
+              text-align: left;
+            }
+            
+            th {
+              background-color: #f5f5f5;
+              font-weight: bold;
+            }
+            
+            mark {
+              background-color: #ffff00;
+              padding: 0 2px;
+            }
+            
+            strong {
+              font-weight: bold;
+            }
+            
+            em {
+              font-style: italic;
+            }
+            
+            u {
+              text-decoration: underline;
+            }
+            
+            s {
+              text-decoration: line-through;
+            }
+            
+            code {
+              background-color: #f0f0f0;
+              padding: 2px 6px;
+              border-radius: 3px;
+              font-family: "Courier New", monospace;
+            }
+            
+            pre {
+              background-color: #f5f5f5;
+              padding: 12px;
+              border-radius: 5px;
+              overflow-x: auto;
+              page-break-inside: avoid;
+            }
+            
+            blockquote {
+              border-left: 4px solid #ccc;
+              padding-left: 16px;
+              margin-left: 0;
+              color: #666;
+              page-break-inside: avoid;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-content">
+            ${editorContent}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 250);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+    
+    iframe.contentDocument.write(printHTML);
+    iframe.contentDocument.close();
   };
 
   return (
@@ -532,6 +702,16 @@ export default function MenuBar({
             >
               <FileText className="size-4 text-blue-500" />
               Export as DOCX
+            </button>
+            <div className="border-t my-1" />
+            <button
+              onClick={() => {
+                handlePrint();
+              }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded flex items-center gap-2"
+            >
+              <Printer className="size-4 text-gray-700" />
+              Print
             </button>
           </div>
         )}
