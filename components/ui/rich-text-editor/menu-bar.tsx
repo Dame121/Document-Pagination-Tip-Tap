@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { PageFormatSelector } from "./page-format-selector";
 import { PageFormatId } from "@/lib/page-formats";
-import { exportToPDF, exportToDOCX } from "@/lib/export-utils";
+import { exportToPDF, exportToDOCX, ExportOptions } from "@/lib/export-utils";
 import HeaderFooterDialog, { HeaderFooterSettings } from "./header-footer-dialog";
 
 interface MenuBarProps {
@@ -197,7 +197,14 @@ export default function MenuBar({
     if (!editor) return;
     setIsExporting(true);
     try {
-      await exportToPDF(editor, "document");
+      const exportOptions: ExportOptions = {
+        headerLeft: headerFooterSettings?.headerLeft,
+        headerRight: headerFooterSettings?.headerRight,
+        footerLeft: headerFooterSettings?.footerLeft,
+        footerRight: headerFooterSettings?.footerRight,
+        pageFormat: pageFormat,
+      };
+      await exportToPDF(editor, "document", exportOptions);
     } catch (error) {
       console.error("PDF export failed:", error);
     } finally {
@@ -209,7 +216,14 @@ export default function MenuBar({
     if (!editor) return;
     setIsExporting(true);
     try {
-      await exportToDOCX(editor, "document");
+      const exportOptions: ExportOptions = {
+        headerLeft: headerFooterSettings?.headerLeft,
+        headerRight: headerFooterSettings?.headerRight,
+        footerLeft: headerFooterSettings?.footerLeft,
+        footerRight: headerFooterSettings?.footerRight,
+        pageFormat: pageFormat,
+      };
+      await exportToDOCX(editor, "document", exportOptions);
     } catch (error) {
       console.error("DOCX export failed:", error);
     } finally {
@@ -471,7 +485,14 @@ export default function MenuBar({
                 setIsExporting(true);
                 setShowExportMenu(false);
                 try {
-                  await exportToPDF(editor, "document");
+                  const exportOptions: ExportOptions = {
+                    headerLeft: headerFooterSettings?.headerLeft,
+                    headerRight: headerFooterSettings?.headerRight,
+                    footerLeft: headerFooterSettings?.footerLeft,
+                    footerRight: headerFooterSettings?.footerRight,
+                    pageFormat: pageFormat,
+                  };
+                  await exportToPDF(editor, "document", exportOptions);
                 } catch (error) {
                   console.error("PDF export failed:", error);
                   alert("Failed to export PDF. Please try again.");
@@ -491,7 +512,14 @@ export default function MenuBar({
                 setIsExporting(true);
                 setShowExportMenu(false);
                 try {
-                  await exportToDOCX(editor, "document");
+                  const exportOptions: ExportOptions = {
+                    headerLeft: headerFooterSettings?.headerLeft,
+                    headerRight: headerFooterSettings?.headerRight,
+                    footerLeft: headerFooterSettings?.footerLeft,
+                    footerRight: headerFooterSettings?.footerRight,
+                    pageFormat: pageFormat,
+                  };
+                  await exportToDOCX(editor, "document", exportOptions);
                 } catch (error) {
                   console.error("DOCX export failed:", error);
                   alert("Failed to export DOCX. Please try again.");

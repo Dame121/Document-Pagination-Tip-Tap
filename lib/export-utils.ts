@@ -10,223 +10,248 @@ import {
   TableRow,
   TableCell,
   WidthType,
+  Header,
+  Footer,
+  PageNumber,
+  HighlightColor,
 } from "docx";
 import { saveAs } from "file-saver";
 import { jsPDF } from "jspdf";
+import { PageFormat, getPageFormat, PageFormatId } from "./page-formats";
 
-// PDF Export using jsPDF directly (avoids html2canvas color parsing issues)
-export async function exportToPDF(editor: Editor, filename: string = "document") {
-  const content = editor.getHTML();
-  const elements = parseHTMLToPDFElements(content);
-  
-  const pdf = new jsPDF({
-    orientation: "portrait",
-    unit: "pt",
-    format: "letter",
-  });
-  
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 72; // 1 inch in points
-  const contentWidth = pageWidth - margin * 2;
-  let y = margin;
-  
-  const lineHeight = 1.5;
-  
-  for (const element of elements) {
-    // Check if we need a new page
-    if (y > pageHeight - margin - 20) {
-      pdf.addPage();
-      y = margin;
-    }
-    
-    switch (element.type) {
-      case "heading1":
-        pdf.setFontSize(24);
-        pdf.setFont("helvetica", "bold");
-        const h1Lines = pdf.splitTextToSize(element.text, contentWidth);
-        pdf.text(h1Lines, margin, y);
-        y += h1Lines.length * 24 * lineHeight + 12;
-        break;
-        
-      case "heading2":
-        pdf.setFontSize(18);
-        pdf.setFont("helvetica", "bold");
-        const h2Lines = pdf.splitTextToSize(element.text, contentWidth);
-        pdf.text(h2Lines, margin, y);
-        y += h2Lines.length * 18 * lineHeight + 10;
-        break;
-        
-      case "heading3":
-        pdf.setFontSize(14);
-        pdf.setFont("helvetica", "bold");
-        const h3Lines = pdf.splitTextToSize(element.text, contentWidth);
-        pdf.text(h3Lines, margin, y);
-        y += h3Lines.length * 14 * lineHeight + 8;
-        break;
-        
-      case "paragraph":
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "normal");
-        const pLines = pdf.splitTextToSize(element.text, contentWidth);
-        pdf.text(pLines, margin, y);
-        y += pLines.length * 12 * lineHeight + 10;
-        break;
-        
-      case "listItem":
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "normal");
-        const bulletText = `${element.bullet} ${element.text}`;
-        const liLines = pdf.splitTextToSize(bulletText, contentWidth - 20);
-        pdf.text(liLines, margin + 20, y);
-        y += liLines.length * 12 * lineHeight + 6;
-        break;
-        
-      case "table":
-        y = renderTableToPDF(pdf, element.rows, margin, y, contentWidth, pageHeight);
-        y += 10;
-        break;
-    }
-  }
-  
-  pdf.save(`${filename}.pdf`);
+// Interface for header/footer settings
+export interface ExportOptions {
+  headerLeft?: string;
+  headerRight?: string;
+  footerLeft?: string;
+  footerRight?: string;
+  pageFormat?: PageFormatId;
 }
 
-// Helper to render table to PDF
-function renderTableToPDF(
-  pdf: jsPDF, 
-  rows: { cells: string[]; isHeader: boolean }[], 
-  startX: number, 
-  startY: number, 
-  maxWidth: number,
-  pageHeight: number
-): number {
-  if (rows.length === 0) return startY;
-  
-  const colCount = Math.max(...rows.map(r => r.cells.length));
-  const colWidth = maxWidth / colCount;
-  const cellPadding = 5;
-  const rowHeight = 20;
-  
-  let y = startY;
-  
-  for (const row of rows) {
-    // Check for page break
-    if (y > pageHeight - 72 - rowHeight) {
-      pdf.addPage();
-      y = 72;
-    }
-    
-    let x = startX;
-    
-    for (let i = 0; i < colCount; i++) {
-      const cellText = row.cells[i] || "";
-      
-      // Draw cell border
-      pdf.setDrawColor(0);
-      pdf.setLineWidth(0.5);
-      pdf.rect(x, y, colWidth, rowHeight);
-      
-      // Fill header background
-      if (row.isHeader) {
-        pdf.setFillColor(240, 240, 240);
-        pdf.rect(x, y, colWidth, rowHeight, "F");
-        pdf.rect(x, y, colWidth, rowHeight, "S");
-        pdf.setFont("helvetica", "bold");
-      } else {
-        pdf.setFont("helvetica", "normal");
-      }
-      
-      // Draw text
-      pdf.setFontSize(10);
-      const textLines = pdf.splitTextToSize(cellText, colWidth - cellPadding * 2);
-      pdf.text(textLines[0] || "", x + cellPadding, y + 14);
-      
-      x += colWidth;
-    }
-    
-    y += rowHeight;
-  }
-  
-  return y;
+// Map page format IDs to jsPDF format strings
+function getJsPDFFormat(pageFormatId: PageFormatId): string {
+  const formatMap: Record<PageFormatId, string> = {
+    "letter": "letter",
+    "legal": "legal",
+    "tabloid": "tabloid",
+    "a3": "a3",
+    "a4": "a4",
+    "a5": "a5",
+  };
+  return formatMap[pageFormatId] || "letter";
 }
 
-// Types for PDF elements
-type PDFElement = 
-  | { type: "heading1" | "heading2" | "heading3" | "paragraph"; text: string }
-  | { type: "listItem"; text: string; bullet: string }
-  | { type: "table"; rows: { cells: string[]; isHeader: boolean }[] };
+// Convert pixels to millimeters
+function pixelsToMM(pixels: number): number {
+  return pixels / 3.779528;
+}
 
-// Helper to parse HTML for PDF export
-function parseHTMLToPDFElements(html: string): PDFElement[] {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-  const elements: PDFElement[] = [];
-  
-  function getTextContent(element: Element): string {
-    return element.textContent?.trim() || "";
-  }
-  
-  function processNode(node: Node): void {
-    if (node.nodeType !== Node.ELEMENT_NODE) return;
+// Simple PDF Export using jsPDF
+export async function exportToPDF(
+  editor: Editor, 
+  filename: string = "document",
+  options?: ExportOptions
+) {
+  try {
+    const content = editor.getHTML();
     
-    const element = node as HTMLElement;
-    const tagName = element.tagName.toLowerCase();
+    // Get page format settings
+    const pageFormatId = options?.pageFormat || "letter";
+    const pageFormat = getPageFormat(pageFormatId as PageFormatId);
+    const jsPDFFormat = getJsPDFFormat(pageFormatId as PageFormatId);
     
-    switch (tagName) {
-      case "h1":
-        elements.push({ type: "heading1", text: getTextContent(element) });
-        break;
-      case "h2":
-        elements.push({ type: "heading2", text: getTextContent(element) });
-        break;
-      case "h3":
-        elements.push({ type: "heading3", text: getTextContent(element) });
-        break;
-      case "p":
-        const text = getTextContent(element);
-        if (text) {
-          elements.push({ type: "paragraph", text });
+    // Convert margins from pixels to millimeters
+    const marginTopMM = pixelsToMM(pageFormat.marginTop);
+    const marginBottomMM = pixelsToMM(pageFormat.marginBottom);
+    const marginLeftMM = pixelsToMM(pageFormat.marginLeft);
+    const marginRightMM = pixelsToMM(pageFormat.marginRight);
+    
+    // Create PDF with standard format
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: jsPDFFormat,
+    });
+    
+    // Get actual page dimensions
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const contentWidth = pageWidth - marginLeftMM - marginRightMM;
+    
+    let y = marginTopMM + 5; // Start below header space
+    let pageNum = 1;
+    
+    // Parse HTML and render
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(content, "text/html");
+    
+    // Process each element
+    doc.body.childNodes.forEach((node) => {
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      
+      const element = node as HTMLElement;
+      const tagName = element.tagName.toLowerCase();
+      
+      // Check if we need a new page
+      const checkNewPage = (height: number = 10) => {
+        if (y + height > pageHeight - marginBottomMM - 5) {
+          pdf.addPage();
+          pageNum++;
+          y = marginTopMM + 5;
         }
-        break;
-      case "ul":
-        element.querySelectorAll(":scope > li").forEach((li) => {
-          elements.push({ type: "listItem", text: getTextContent(li), bullet: "•" });
-        });
-        break;
-      case "ol":
-        element.querySelectorAll(":scope > li").forEach((li, index) => {
-          elements.push({ type: "listItem", text: getTextContent(li), bullet: `${index + 1}.` });
-        });
-        break;
-      case "table":
-        const rows: { cells: string[]; isHeader: boolean }[] = [];
-        element.querySelectorAll("tr").forEach((tr) => {
-          const cells: string[] = [];
-          let isHeader = false;
-          tr.querySelectorAll("th, td").forEach((cell) => {
-            if (cell.tagName.toLowerCase() === "th") isHeader = true;
-            cells.push(getTextContent(cell));
+      };
+      
+      switch (tagName) {
+        case "h1":
+          checkNewPage(15);
+          pdf.setFontSize(24);
+          pdf.setFont("helvetica", "bold");
+          const h1Text = element.textContent || "";
+          const h1Lines = pdf.splitTextToSize(h1Text, contentWidth);
+          h1Lines.forEach((line: string) => {
+            pdf.text(line, marginLeftMM, y);
+            y += 8;
           });
-          if (cells.length > 0) {
-            rows.push({ cells, isHeader });
-          }
-        });
-        if (rows.length > 0) {
-          elements.push({ type: "table", rows });
+          y += 3;
+          break;
+          
+        case "h2":
+          checkNewPage(12);
+          pdf.setFontSize(18);
+          pdf.setFont("helvetica", "bold");
+          const h2Text = element.textContent || "";
+          const h2Lines = pdf.splitTextToSize(h2Text, contentWidth);
+          h2Lines.forEach((line: string) => {
+            pdf.text(line, marginLeftMM, y);
+            y += 7;
+          });
+          y += 2;
+          break;
+          
+        case "h3":
+          checkNewPage(10);
+          pdf.setFontSize(14);
+          pdf.setFont("helvetica", "bold");
+          const h3Text = element.textContent || "";
+          const h3Lines = pdf.splitTextToSize(h3Text, contentWidth);
+          h3Lines.forEach((line: string) => {
+            pdf.text(line, marginLeftMM, y);
+            y += 6;
+          });
+          y += 1;
+          break;
+          
+        case "p":
+          checkNewPage(8);
+          pdf.setFontSize(12);
+          pdf.setFont("helvetica", "normal");
+          const pText = element.textContent || "";
+          const pLines = pdf.splitTextToSize(pText, contentWidth);
+          pLines.forEach((line: string) => {
+            pdf.text(line, marginLeftMM, y);
+            y += 5;
+          });
+          y += 2;
+          break;
+          
+        case "ul":
+        case "ol":
+          checkNewPage(10);
+          let index = 1;
+          element.querySelectorAll("li").forEach((li) => {
+            const liText = li.textContent || "";
+            const bullet = tagName === "ul" ? "•" : `${index}.`;
+            const liLines = pdf.splitTextToSize(bullet + " " + liText, contentWidth - 5);
+            liLines.forEach((line: string, lineIdx: number) => {
+              pdf.text(line, marginLeftMM + (lineIdx > 0 ? 5 : 0), y);
+              y += 5;
+            });
+            index++;
+          });
+          y += 2;
+          break;
+          
+        case "table":
+          checkNewPage(15);
+          pdf.setFontSize(10);
+          const rows: HTMLTableRowElement[] = Array.from(element.querySelectorAll("tr"));
+          const colCount = Math.max(...rows.map(r => r.children.length), 1);
+          const colWidth = contentWidth / colCount;
+          
+          rows.forEach(row => {
+            if (y + 8 > pageHeight - marginBottomMM - 5) {
+              pdf.addPage();
+              y = marginTopMM + 5;
+            }
+            
+            Array.from(row.children).forEach((cell, colIdx) => {
+              const x = marginLeftMM + colIdx * colWidth;
+              const isHeader = row.querySelector("th") !== null;
+              
+              // Draw cell border
+              pdf.setDrawColor(0);
+              pdf.setLineWidth(0.1);
+              pdf.rect(x, y, colWidth, 8);
+              
+              // Fill header
+              if (isHeader) {
+                pdf.setFillColor(240, 240, 240);
+                pdf.rect(x, y, colWidth, 8, "F");
+                pdf.setFont("helvetica", "bold");
+              } else {
+                pdf.setFont("helvetica", "normal");
+              }
+              
+              // Draw text
+              const cellText = cell.textContent || "";
+              pdf.text(cellText.substring(0, 20), x + 1, y + 5);
+            });
+            
+            y += 8;
+          });
+          y += 2;
+          break;
+      }
+    });
+    
+    // Add headers and footers if provided
+    if (options?.headerLeft || options?.headerRight || options?.footerLeft || options?.footerRight) {
+      const pages = pdf.internal.pages.length - 1; // -1 because page 0 is empty
+      for (let p = 1; p <= pages; p++) {
+        pdf.setPage(p);
+        pdf.setFontSize(10);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(128, 128, 128);
+        
+        if (options?.headerLeft) {
+          const text = options.headerLeft.replace('{page}', String(p));
+          pdf.text(text, marginLeftMM, marginTopMM - 2);
         }
-        break;
-      default:
-        element.childNodes.forEach(processNode);
+        if (options?.headerRight) {
+          const text = options.headerRight.replace('{page}', String(p));
+          const textWidth = pdf.getTextWidth(text);
+          pdf.text(text, pageWidth - marginRightMM - textWidth, marginTopMM - 2);
+        }
+        if (options?.footerLeft) {
+          const text = options.footerLeft.replace('{page}', String(p));
+          pdf.text(text, marginLeftMM, pageHeight - marginBottomMM + 2);
+        }
+        if (options?.footerRight) {
+          const text = options.footerRight.replace('{page}', String(p));
+          const textWidth = pdf.getTextWidth(text);
+          pdf.text(text, pageWidth - marginRightMM - textWidth, pageHeight - marginBottomMM + 2);
+        }
+      }
     }
+    
+    pdf.save(`${filename}.pdf`);
+  } catch (error) {
+    console.error("PDF export error:", error);
+    alert("Failed to export PDF. Please try again.");
   }
-  
-  doc.body.childNodes.forEach(processNode);
-  
-  return elements;
 }
 
-// Helper to parse HTML content and extract text with formatting
+// Helper to parse HTML content and extract text with formatting for DOCX
 function parseHTMLToDocxElements(html: string): (Paragraph | Table)[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
@@ -342,16 +367,22 @@ function parseHTMLToDocxElements(html: string): (Paragraph | Table)[] {
   function getTextRuns(element: HTMLElement): TextRun[] {
     const runs: TextRun[] = [];
     
-    function extractRuns(node: Node, formatting: { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean } = {}) {
+    function extractRuns(node: Node, formatting: { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; highlight?: string } = {}) {
       if (node.nodeType === Node.TEXT_NODE) {
         const text = node.textContent || "";
         if (text) {
+          let highlightColor: (typeof HighlightColor)[keyof typeof HighlightColor] | undefined;
+          if (formatting.highlight) {
+            highlightColor = getDocxHighlightColor(formatting.highlight);
+          }
+          
           runs.push(new TextRun({
             text,
             bold: formatting.bold,
             italics: formatting.italic,
             underline: formatting.underline ? {} : undefined,
             strike: formatting.strike,
+            highlight: highlightColor,
           }));
         }
         return;
@@ -368,6 +399,9 @@ function parseHTMLToDocxElements(html: string): (Paragraph | Table)[] {
       if (tag === "em" || tag === "i") newFormatting.italic = true;
       if (tag === "u") newFormatting.underline = true;
       if (tag === "s" || tag === "strike") newFormatting.strike = true;
+      if (tag === "mark") {
+        newFormatting.highlight = el.getAttribute('data-color') || el.style.backgroundColor || '#fef08a';
+      }
       
       el.childNodes.forEach((child) => extractRuns(child, newFormatting));
     }
@@ -375,6 +409,29 @@ function parseHTMLToDocxElements(html: string): (Paragraph | Table)[] {
     element.childNodes.forEach((child) => extractRuns(child));
     
     return runs.length > 0 ? runs : [new TextRun("")];
+  }
+  
+  function getDocxHighlightColor(color: string): (typeof HighlightColor)[keyof typeof HighlightColor] {
+    const lowerColor = color.toLowerCase();
+    if (lowerColor.includes('yellow') || lowerColor === '#fef08a' || lowerColor === '#ffff00') {
+      return HighlightColor.YELLOW;
+    }
+    if (lowerColor.includes('green') || lowerColor === '#bbf7d0' || lowerColor === '#00ff00') {
+      return HighlightColor.GREEN;
+    }
+    if (lowerColor.includes('cyan') || lowerColor === '#a5f3fc' || lowerColor === '#00ffff') {
+      return HighlightColor.CYAN;
+    }
+    if (lowerColor.includes('magenta') || lowerColor.includes('pink') || lowerColor === '#fecdd3') {
+      return HighlightColor.MAGENTA;
+    }
+    if (lowerColor.includes('blue') || lowerColor === '#bfdbfe') {
+      return HighlightColor.BLUE;
+    }
+    if (lowerColor.includes('red') || lowerColor === '#fecaca') {
+      return HighlightColor.RED;
+    }
+    return HighlightColor.YELLOW;
   }
   
   function getAlignment(element: HTMLElement): (typeof AlignmentType)[keyof typeof AlignmentType] | undefined {
@@ -389,7 +446,6 @@ function parseHTMLToDocxElements(html: string): (Paragraph | Table)[] {
     elements.push(...processNode(node));
   });
   
-  // Add empty paragraph if no content
   if (elements.length === 0) {
     elements.push(new Paragraph({ children: [new TextRun("")] }));
   }
@@ -397,23 +453,141 @@ function parseHTMLToDocxElements(html: string): (Paragraph | Table)[] {
   return elements;
 }
 
+// Convert margins from pixels to twips (1 twip = 1/20 of a point, 1 point = 1/72 inch)
+// Page formats use pixels at ~96 DPI
+function pixelsToTwips(pixels: number): number {
+  const points = (pixels / 96) * 72; // Convert pixels to points
+  return points * 20; // Convert points to twips
+}
+
 // DOCX Export using docx library (browser-compatible)
-export async function exportToDOCX(editor: Editor, filename: string = "document") {
+export async function exportToDOCX(
+  editor: Editor, 
+  filename: string = "document",
+  options?: ExportOptions
+) {
   const content = editor.getHTML();
   const elements = parseHTMLToDocxElements(content);
+  
+  // Get page format
+  const pageFormatId = options?.pageFormat || "letter";
+  const pageFormat = getPageFormat(pageFormatId as PageFormatId);
+  
+  // Convert margins from pixels to twips
+  const marginTopTwips = pixelsToTwips(pageFormat.marginTop);
+  const marginBottomTwips = pixelsToTwips(pageFormat.marginBottom);
+  const marginLeftTwips = pixelsToTwips(pageFormat.marginLeft);
+  const marginRightTwips = pixelsToTwips(pageFormat.marginRight);
+  
+  // Create header if options provided
+  const headers: { default?: Header } = {};
+  if (options?.headerLeft || options?.headerRight) {
+    const headerChildren: TextRun[] = [];
+    
+    if (options.headerLeft) {
+      headerChildren.push(new TextRun({
+        text: options.headerLeft.replace('{page}', ''),
+      }));
+    }
+    
+    if (options.headerLeft && options.headerRight) {
+      headerChildren.push(new TextRun({ text: '\t\t' })); // Tab to right align
+    }
+    
+    if (options.headerRight) {
+      if (options.headerRight.includes('{page}')) {
+        const parts = options.headerRight.split('{page}');
+        if (parts[0]) {
+          headerChildren.push(new TextRun({ text: parts[0] }));
+        }
+        headerChildren.push(new TextRun({
+          children: [PageNumber.CURRENT],
+        }));
+        if (parts[1]) {
+          headerChildren.push(new TextRun({ text: parts[1] }));
+        }
+      } else {
+        headerChildren.push(new TextRun({ text: options.headerRight }));
+      }
+    }
+    
+    headers.default = new Header({
+      children: [new Paragraph({
+        children: headerChildren,
+        tabStops: [
+          { type: 'right' as const, position: 9072 }, // Right tab at 6.3 inches
+        ],
+      })],
+    });
+  }
+  
+  // Create footer if options provided
+  const footers: { default?: Footer } = {};
+  if (options?.footerLeft || options?.footerRight) {
+    const footerChildren: TextRun[] = [];
+    
+    if (options.footerLeft) {
+      if (options.footerLeft.includes('{page}')) {
+        const parts = options.footerLeft.split('{page}');
+        if (parts[0]) {
+          footerChildren.push(new TextRun({ text: parts[0] }));
+        }
+        footerChildren.push(new TextRun({
+          children: [PageNumber.CURRENT],
+        }));
+        if (parts[1]) {
+          footerChildren.push(new TextRun({ text: parts[1] }));
+        }
+      } else {
+        footerChildren.push(new TextRun({ text: options.footerLeft }));
+      }
+    }
+    
+    if (options.footerLeft && options.footerRight) {
+      footerChildren.push(new TextRun({ text: '\t\t' })); // Tab to right align
+    }
+    
+    if (options.footerRight) {
+      if (options.footerRight.includes('{page}')) {
+        const parts = options.footerRight.split('{page}');
+        if (parts[0]) {
+          footerChildren.push(new TextRun({ text: parts[0] }));
+        }
+        footerChildren.push(new TextRun({
+          children: [PageNumber.CURRENT],
+        }));
+        if (parts[1]) {
+          footerChildren.push(new TextRun({ text: parts[1] }));
+        }
+      } else {
+        footerChildren.push(new TextRun({ text: options.footerRight }));
+      }
+    }
+    
+    footers.default = new Footer({
+      children: [new Paragraph({
+        children: footerChildren,
+        tabStops: [
+          { type: 'right' as const, position: 9072 }, // Right tab at 6.3 inches
+        ],
+      })],
+    });
+  }
   
   const doc = new Document({
     sections: [{
       properties: {
         page: {
           margin: {
-            top: 1440,    // 1 inch in twips (1440 twips = 1 inch)
-            right: 1440,
-            bottom: 1440,
-            left: 1440,
+            top: marginTopTwips,
+            right: marginRightTwips,
+            bottom: marginBottomTwips,
+            left: marginLeftTwips,
           },
         },
       },
+      headers: headers.default ? headers : undefined,
+      footers: footers.default ? footers : undefined,
       children: elements,
     }],
   });
