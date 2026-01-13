@@ -15,6 +15,7 @@ import TableHeader from "@tiptap/extension-table-header";
 import { PaginationPlus } from "tiptap-pagination-plus";
 import MenuBar from "./menu-bar";
 import { PageFormatId, DEFAULT_PAGE_FORMAT, getPageFormat } from "@/lib/page-formats";
+import { HeaderFooterSettings, DEFAULT_SETTINGS } from "./header-footer-dialog";
 
 interface RichTextEditorProps {
   defaultPageFormat?: PageFormatId;
@@ -24,7 +25,11 @@ export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT
   const [pageFormat, setPageFormat] = useState<PageFormatId>(defaultPageFormat);
   const [editorKey, setEditorKey] = useState(0);
   const contentRef = useRef<string>("<p></p>");
+  const [headerFooterSettings, setHeaderFooterSettings] = useState<HeaderFooterSettings>(DEFAULT_SETTINGS);
   const currentFormat = getPageFormat(pageFormat);
+  
+  // Use a ref to track the settings for the editor initialization
+  const headerFooterRef = useRef<HeaderFooterSettings>(headerFooterSettings);
   
   const editor = useEditor({
     extensions: [
@@ -72,10 +77,10 @@ export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT
         marginRight: currentFormat.marginRight,
         contentMarginTop: 20,
         contentMarginBottom: 20,
-        headerLeft: "",
-        headerRight: "",
-        footerLeft: "",
-        footerRight: "Page {page}",
+        headerLeft: headerFooterRef.current.headerLeft,
+        headerRight: headerFooterRef.current.headerRight,
+        footerLeft: headerFooterRef.current.footerLeft,
+        footerRight: headerFooterRef.current.footerRight,
       }),
     ],
     content: contentRef.current,
@@ -89,7 +94,7 @@ export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT
       // Save content on every update
       contentRef.current = editor.getHTML();
     },
-  }, [editorKey]); // Re-create editor when editorKey changes
+  }, [editorKey]); // Re-create editor only when editorKey changes
 
   // Handle page format change - save content and recreate editor
   const handlePageFormatChange = useCallback((newFormat: PageFormatId) => {
@@ -102,6 +107,19 @@ export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT
     setEditorKey(prev => prev + 1);
   }, [editor]);
 
+  // Handle header/footer settings change - save content and recreate editor
+  const handleHeaderFooterChange = useCallback((newSettings: HeaderFooterSettings) => {
+    if (editor) {
+      // Save current content before destroying
+      contentRef.current = editor.getHTML();
+    }
+    // Update the ref so the new editor gets the new settings
+    headerFooterRef.current = newSettings;
+    setHeaderFooterSettings(newSettings);
+    // Increment key to force editor recreation
+    setEditorKey(prev => prev + 1);
+  }, [editor]);
+
   return (
     <EditorContext.Provider value={{ editor }}>
       <div className="editor-document-wrapper">
@@ -109,6 +127,8 @@ export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT
           editor={editor} 
           pageFormat={pageFormat}
           onPageFormatChange={handlePageFormatChange}
+          headerFooterSettings={headerFooterSettings}
+          onHeaderFooterChange={handleHeaderFooterChange}
         />
         <div className="editor-pages-scroll-container">
           <EditorContent 

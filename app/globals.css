@@ -310,6 +310,31 @@
   border-bottom: none;
 }
 
+/* Header and footer content layout */
+.rm-with-pagination .rm-page-header-content,
+.rm-with-pagination .rm-page-footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.rm-with-pagination .rm-page-header-left,
+.rm-with-pagination .rm-page-footer-left {
+  text-align: left;
+}
+
+.rm-with-pagination .rm-page-header-right,
+.rm-with-pagination .rm-page-footer-right {
+  text-align: right;
+}
+
+/* Ensure page number spans are inline */
+.rm-with-pagination .rm-page-number,
+.rm-with-pagination .rm-page-number-plus {
+  display: inline;
+}
+
 /* Ensure ProseMirror content styling */
 .ProseMirror {
   outline: none;

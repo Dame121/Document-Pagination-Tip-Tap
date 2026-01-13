@@ -30,23 +30,34 @@ import {
   Trash2,
   FileDown,
   FileText,
+  PanelTop,
 } from "lucide-react";
 import { PageFormatSelector } from "./page-format-selector";
 import { PageFormatId } from "@/lib/page-formats";
 import { exportToPDF, exportToDOCX } from "@/lib/export-utils";
+import HeaderFooterDialog, { HeaderFooterSettings } from "./header-footer-dialog";
 
 interface MenuBarProps {
   editor: Editor | null;
   pageFormat?: PageFormatId;
   onPageFormatChange?: (format: PageFormatId) => void;
+  headerFooterSettings?: HeaderFooterSettings;
+  onHeaderFooterChange?: (settings: HeaderFooterSettings) => void;
 }
 
-export default function MenuBar({ editor, pageFormat, onPageFormatChange }: MenuBarProps) {
+export default function MenuBar({ 
+  editor, 
+  pageFormat, 
+  onPageFormatChange,
+  headerFooterSettings,
+  onHeaderFooterChange,
+}: MenuBarProps) {
   const [, setForceUpdate] = useState(0);
   const [showHighlightColors, setShowHighlightColors] = useState(false);
   const [showTableMenu, setShowTableMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showHeaderFooterDialog, setShowHeaderFooterDialog] = useState(false);
 
   const highlightColors = [
     { color: "#fef08a", label: "Yellow" },
@@ -424,6 +435,20 @@ export default function MenuBar({ editor, pageFormat, onPageFormatChange }: Menu
 
       <div className="w-px h-6 bg-gray-300 mx-1" /> {/* Divider */}
 
+      {/* Header & Footer Button */}
+      {headerFooterSettings && onHeaderFooterChange && (
+        <>
+          <button
+            onClick={() => setShowHeaderFooterDialog(true)}
+            title="Header & Footer"
+            className="p-2 rounded-md transition-all duration-200 ease-in-out hover:bg-gray-100 hover:scale-105 active:scale-95 flex items-center gap-1 text-gray-600"
+          >
+            <PanelTop className="size-5" />
+          </button>
+          <div className="w-px h-6 bg-gray-300 mx-1" /> {/* Divider */}
+        </>
+      )}
+
       {/* Export Menu */}
       <div className="relative">
         <button
@@ -483,6 +508,16 @@ export default function MenuBar({ editor, pageFormat, onPageFormatChange }: Menu
           </div>
         )}
       </div>
+
+      {/* Header & Footer Dialog */}
+      {headerFooterSettings && onHeaderFooterChange && (
+        <HeaderFooterDialog
+          isOpen={showHeaderFooterDialog}
+          onClose={() => setShowHeaderFooterDialog(false)}
+          settings={headerFooterSettings}
+          onSave={onHeaderFooterChange}
+        />
+      )}
     </div>
   );
   
