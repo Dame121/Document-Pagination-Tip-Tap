@@ -47,10 +47,10 @@ export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT
       PaginationPlus.configure({
         pageHeight: currentFormat.height,
         pageWidth: currentFormat.width,
-        pageGap: 20,
+        pageGap: 32,
         pageBreakBackground: "#e5e7eb",
-        pageGapBorderSize: 1,
-        pageGapBorderColor: "#d1d5db",
+        pageGapBorderSize: 0,
+        pageGapBorderColor: "transparent",
         marginTop: currentFormat.marginTop,
         marginBottom: currentFormat.marginBottom,
         marginLeft: currentFormat.marginLeft,
