@@ -28,9 +28,12 @@ import {
   Plus,
   Minus,
   Trash2,
+  FileDown,
+  FileText,
 } from "lucide-react";
 import { PageFormatSelector } from "./page-format-selector";
 import { PageFormatId } from "@/lib/page-formats";
+import { exportToPDF, exportToDOCX } from "@/lib/export-utils";
 
 interface MenuBarProps {
   editor: Editor | null;
@@ -42,6 +45,8 @@ export default function MenuBar({ editor, pageFormat, onPageFormatChange }: Menu
   const [, setForceUpdate] = useState(0);
   const [showHighlightColors, setShowHighlightColors] = useState(false);
   const [showTableMenu, setShowTableMenu] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const highlightColors = [
     { color: "#fef08a", label: "Yellow" },
@@ -176,6 +181,30 @@ export default function MenuBar({ editor, pageFormat, onPageFormatChange }: Menu
       title: "Numbered List",
     },
   ];
+
+  const handleExportPDF = async () => {
+    if (!editor) return;
+    setIsExporting(true);
+    try {
+      await exportToPDF(editor, "document");
+    } catch (error) {
+      console.error("PDF export failed:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportDOCX = async () => {
+    if (!editor) return;
+    setIsExporting(true);
+    try {
+      await exportToDOCX(editor, "document");
+    } catch (error) {
+      console.error("DOCX export failed:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="border rounded-lg p-2 mb-2 bg-white shadow-sm flex flex-wrap items-center gap-1 sticky top-4 z-50 no-print">
@@ -389,6 +418,68 @@ export default function MenuBar({ editor, pageFormat, onPageFormatChange }: Menu
                 </button>
               </>
             )}
+          </div>
+        )}
+      </div>
+
+      <div className="w-px h-6 bg-gray-300 mx-1" /> {/* Divider */}
+
+      {/* Export Menu */}
+      <div className="relative">
+        <button
+          onClick={() => setShowExportMenu(!showExportMenu)}
+          disabled={isExporting}
+          title="Export Document"
+          className={`p-2 rounded-md transition-all duration-200 ease-in-out hover:bg-gray-100 hover:scale-105 active:scale-95 flex items-center gap-1 ${
+            isExporting ? "opacity-50 cursor-not-allowed" : "text-gray-600"
+          }`}
+        >
+          <FileDown className="size-5" />
+          <ChevronDown className="size-3" />
+        </button>
+        
+        {showExportMenu && (
+          <div className="absolute top-full mt-1 right-0 bg-white border rounded-lg shadow-lg p-2 z-50 min-w-[160px]">
+            <button
+              onClick={async () => {
+                if (!editor) return;
+                setIsExporting(true);
+                setShowExportMenu(false);
+                try {
+                  await exportToPDF(editor, "document");
+                } catch (error) {
+                  console.error("PDF export failed:", error);
+                  alert("Failed to export PDF. Please try again.");
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+              disabled={isExporting}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded flex items-center gap-2"
+            >
+              <FileDown className="size-4 text-red-500" />
+              Export as PDF
+            </button>
+            <button
+              onClick={async () => {
+                if (!editor) return;
+                setIsExporting(true);
+                setShowExportMenu(false);
+                try {
+                  await exportToDOCX(editor, "document");
+                } catch (error) {
+                  console.error("DOCX export failed:", error);
+                  alert("Failed to export DOCX. Please try again.");
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+              disabled={isExporting}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded flex items-center gap-2"
+            >
+              <FileText className="size-4 text-blue-500" />
+              Export as DOCX
+            </button>
           </div>
         )}
       </div>
