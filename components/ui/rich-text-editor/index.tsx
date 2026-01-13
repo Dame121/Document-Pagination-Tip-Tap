@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useEditor, EditorContent, EditorContext } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
@@ -18,6 +18,8 @@ interface RichTextEditorProps {
 
 export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT }: RichTextEditorProps) {
   const [pageFormat, setPageFormat] = useState<PageFormatId>(defaultPageFormat);
+  const [editorKey, setEditorKey] = useState(0);
+  const contentRef = useRef<string>("<p></p>");
   const currentFormat = getPageFormat(pageFormat);
   
   const editor = useEditor({
@@ -63,35 +65,29 @@ export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT
         footerRight: "Page {page}",
       }),
     ],
-    content: "<p></p>",
+    content: contentRef.current,
     immediatelyRender: false,
     editorProps: {
       attributes: {
         class: "outline-none focus:outline-none prose prose-sm sm:prose lg:prose-lg max-w-none",
       },
     },
-  });
+    onUpdate: ({ editor }) => {
+      // Save content on every update
+      contentRef.current = editor.getHTML();
+    },
+  }, [editorKey]); // Re-create editor when editorKey changes
 
-  // Handle page format change
-  const handlePageFormatChange = (newFormat: PageFormatId) => {
-    setPageFormat(newFormat);
-    const format = getPageFormat(newFormat);
-    
+  // Handle page format change - save content and recreate editor
+  const handlePageFormatChange = useCallback((newFormat: PageFormatId) => {
     if (editor) {
-      // Use the updatePageSize command from tiptap-pagination-plus
-      editor.chain()
-        .focus()
-        .updatePageSize({
-          pageWidth: format.width,
-          pageHeight: format.height,
-          marginTop: format.marginTop,
-          marginBottom: format.marginBottom,
-          marginLeft: format.marginLeft,
-          marginRight: format.marginRight,
-        })
-        .run();
+      // Save current content before destroying
+      contentRef.current = editor.getHTML();
     }
-  };
+    setPageFormat(newFormat);
+    // Increment key to force editor recreation
+    setEditorKey(prev => prev + 1);
+  }, [editor]);
 
   return (
     <EditorContext.Provider value={{ editor }}>
