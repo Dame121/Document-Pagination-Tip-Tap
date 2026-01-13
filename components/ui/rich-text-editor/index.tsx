@@ -8,6 +8,10 @@ import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
+import { Table } from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
 import { PaginationPlus } from "tiptap-pagination-plus";
 import MenuBar from "./menu-bar";
 import { PageFormatId, DEFAULT_PAGE_FORMAT, getPageFormat } from "@/lib/page-formats";
@@ -46,6 +50,15 @@ export default function RichTextEditor({ defaultPageFormat = DEFAULT_PAGE_FORMAT
       Underline,
       Subscript,
       Superscript,
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: {
+          class: 'border-collapse table-auto w-full',
+        },
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
       PaginationPlus.configure({
         pageHeight: currentFormat.height,
         pageWidth: currentFormat.width,

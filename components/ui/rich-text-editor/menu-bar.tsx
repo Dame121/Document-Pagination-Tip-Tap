@@ -24,6 +24,10 @@ import {
   ChevronDown,
   Undo2,
   Redo2,
+  Table,
+  Plus,
+  Minus,
+  Trash2,
 } from "lucide-react";
 import { PageFormatSelector } from "./page-format-selector";
 import { PageFormatId } from "@/lib/page-formats";
@@ -37,6 +41,7 @@ interface MenuBarProps {
 export default function MenuBar({ editor, pageFormat, onPageFormatChange }: MenuBarProps) {
   const [, setForceUpdate] = useState(0);
   const [showHighlightColors, setShowHighlightColors] = useState(false);
+  const [showTableMenu, setShowTableMenu] = useState(false);
 
   const highlightColors = [
     { color: "#fef08a", label: "Yellow" },
@@ -260,6 +265,130 @@ export default function MenuBar({ editor, pageFormat, onPageFormatChange }: Menu
                 title={colorOption.label}
               />
             ))}
+          </div>
+        )}
+      </div>
+
+      <div className="w-px h-6 bg-gray-300 mx-1" /> {/* Divider */}
+
+      {/* Table Controls */}
+      <div className="relative">
+        <button
+          onClick={() => setShowTableMenu(!showTableMenu)}
+          title="Table"
+          className={`p-2 rounded-md transition-all duration-200 ease-in-out hover:bg-gray-100 hover:scale-105 active:scale-95 flex items-center gap-1 ${
+            editor.isActive("table")
+              ? "bg-gray-200 text-blue-600 shadow-inner"
+              : "text-gray-600"
+          }`}
+        >
+          <Table className="size-5" />
+          <ChevronDown className="size-3" />
+        </button>
+        
+        {showTableMenu && (
+          <div className="absolute top-full mt-1 left-0 bg-white border rounded-lg shadow-lg p-2 z-50 min-w-[180px]">
+            <button
+              onClick={() => {
+                editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+                setShowTableMenu(false);
+              }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded flex items-center gap-2"
+            >
+              <Plus className="size-4" /> Insert Table
+            </button>
+            
+            {editor.isActive("table") && (
+              <>
+                <div className="border-t my-1" />
+                <button
+                  onClick={() => {
+                    editor.chain().focus().addColumnBefore().run();
+                    setShowTableMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded"
+                >
+                  Add Column Before
+                </button>
+                <button
+                  onClick={() => {
+                    editor.chain().focus().addColumnAfter().run();
+                    setShowTableMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded"
+                >
+                  Add Column After
+                </button>
+                <button
+                  onClick={() => {
+                    editor.chain().focus().deleteColumn().run();
+                    setShowTableMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded text-red-600"
+                >
+                  Delete Column
+                </button>
+                <div className="border-t my-1" />
+                <button
+                  onClick={() => {
+                    editor.chain().focus().addRowBefore().run();
+                    setShowTableMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded"
+                >
+                  Add Row Before
+                </button>
+                <button
+                  onClick={() => {
+                    editor.chain().focus().addRowAfter().run();
+                    setShowTableMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded"
+                >
+                  Add Row After
+                </button>
+                <button
+                  onClick={() => {
+                    editor.chain().focus().deleteRow().run();
+                    setShowTableMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded text-red-600"
+                >
+                  Delete Row
+                </button>
+                <div className="border-t my-1" />
+                <button
+                  onClick={() => {
+                    editor.chain().focus().mergeCells().run();
+                    setShowTableMenu(false);
+                  }}
+                  disabled={!editor.can().mergeCells()}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Merge Cells
+                </button>
+                <button
+                  onClick={() => {
+                    editor.chain().focus().splitCell().run();
+                    setShowTableMenu(false);
+                  }}
+                  disabled={!editor.can().splitCell()}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Split Cell
+                </button>
+                <div className="border-t my-1" />
+                <button
+                  onClick={() => {
+                    editor.chain().focus().deleteTable().run();
+                    setShowTableMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 rounded text-red-600 flex items-center gap-2"
+                >
+                  <Trash2 className="size-4" /> Delete Table
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
