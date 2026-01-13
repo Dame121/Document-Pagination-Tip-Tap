@@ -61,6 +61,22 @@ A professional, feature-rich document editor built with Next.js and TipTap, feat
 
 ---
 
+## 🤖 AI Tools Used
+
+This project was developed with the assistance of AI coding tools, as permitted by the assignment guidelines:
+
+- **GitHub Copilot** (Claude Opus 4.5 model) - Used for:
+  - Code generation and refactoring
+  - Debugging complex pagination and export logic
+  - Writing documentation and README
+  - Problem-solving CSS and TypeScript issues
+
+> *"You are allowed to use any AI tools given that you understand what AI wrote."* — Assignment Guidelines
+
+All AI-generated code was reviewed, understood, and adapted to fit the project requirements.
+
+---
+
 ## 📦 Installation & Setup
 
 ### Prerequisites
@@ -226,10 +242,20 @@ my-tiptap-project/
 
 ---
 
-## 🙏 Acknowledgments
+## 🙏 Acknowledgments & Contributors
+
+### Contributors
+
+| Contributor | Role |
+|-------------|------|
+| Developer | Project Author |
+| [GitHub Copilot](https://github.com/features/copilot) | AI Pair Programmer (Claude Opus 4.5) |
+
+### Technologies & Resources
 
 - [TipTap](https://tiptap.dev/) - The headless editor framework
 - [tiptap-pagination-plus](https://github.com/RomikMakavana/tiptap-pagination) - Pagination extension that made page breaks possible
+- [GitHub Copilot](https://github.com/features/copilot) - AI-powered coding assistant
 - [Vercel](https://vercel.com/) - Hosting and deployment
 - [OpenSphere](https://opensphere.com/) - For this opportunity
 
